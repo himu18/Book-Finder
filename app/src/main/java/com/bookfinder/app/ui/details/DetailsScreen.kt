@@ -1,11 +1,21 @@
 package com.bookfinder.app.ui.details
 
-// Removed animation imports as rotation animation was removed
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -22,7 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-// Removed rotate import as rotation animation was removed
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -50,7 +60,12 @@ fun DetailsScreen(
     // Debug logging
     android.util.Log.d("DetailsScreen", "Received state: isLoading=${state.isLoading}, book=${state.book}, error=${state.error}, isSaved=${state.isSaved}")
     
-    // Removed rotation animation for better UX
+    // Vertical flip animation for book cover
+    val flipRotation by rememberInfiniteTransition("flip").animateFloat(
+        initialValue = 0f,
+        targetValue = 180f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = 3000, easing = LinearEasing))
+    )
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(state.book?.title ?: "Details") },
@@ -88,40 +103,123 @@ fun DetailsScreen(
                     }
                 }
                 state.book != null -> {
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Book Cover with vertical flip animation
                         GlideImage(
                             model = state.book.coverUrl,
                             contentDescription = state.book.title,
                             modifier = Modifier
-                                .size(200.dp)
-                                .padding(16.dp)
+                                .fillMaxWidth()
+                                .size(300.dp)
+                                .graphicsLayer {
+                                    rotationY = flipRotation
+                                    cameraDistance = 12f * density
+                                }
                         )
-                        Text(
-                            text = state.book.title,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                        state.book.author?.let {
+                        
+                        // Title
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Text(
-                                text = "by $it",
-                                modifier = Modifier.padding(horizontal = 16.dp)
+                                text = "Title:",
+                                style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(0.3f)
+                            )
+                            Text(
+                                text = state.book.title,
+                                style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                modifier = Modifier.weight(0.7f)
                             )
                         }
-                        state.book.publishYear?.let {
+                        
+                        // Author
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Text(
-                                text = "Published: $it",
-                                modifier = Modifier.padding(16.dp)
+                                text = "Author:",
+                                style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(0.3f)
+                            )
+                            Text(
+                                text = state.book.author ?: "Unknown Author",
+                                style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                modifier = Modifier.weight(0.7f)
                             )
                         }
-                        state.book.description?.let {
+                        
+                        // Publication Year
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Text(
-                                text = it,
-                                modifier = Modifier.padding(16.dp)
+                                text = "Year:",
+                                style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(0.3f)
+                            )
+                            Text(
+                                text = state.book.publishYear?.toString() ?: "Unknown Year",
+                                style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                modifier = Modifier.weight(0.7f)
                             )
                         }
+                        
+                        // Description
+                        state.book.description?.let { description ->
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "Description:",
+                                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = description,
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                        
+                        // Fallback message if no data available
                         if (state.book.author == null && state.book.publishYear == null && state.book.description == null) {
                             Text(
                                 text = "Limited details available for this book",
-                                modifier = Modifier.padding(16.dp)
+                                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

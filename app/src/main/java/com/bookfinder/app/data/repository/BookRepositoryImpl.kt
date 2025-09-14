@@ -72,11 +72,51 @@ class BookRepositoryImpl @Inject constructor(
         
         try {
             val details = api.getWorkDetails(id)
-            android.util.Log.d("BookRepository", "API response received: title=${details.title}, authors=${details.authors}, covers=${details.covers}")
+            android.util.Log.d("BookRepository", "API response received: title=${details.title}")
+            android.util.Log.d("BookRepository", "Authors data: ${details.authors}")
+            android.util.Log.d("BookRepository", "Covers data: ${details.covers}")
+            android.util.Log.d("BookRepository", "Created data: ${details.created}")
+            android.util.Log.d("BookRepository", "First publish date: ${details.firstPublishDate}")
             
             // Extract author name from authors array
-            val authorName = details.authors?.firstOrNull()?.get("name") as? String
-            android.util.Log.d("BookRepository", "Extracted author: $authorName")
+            val authorName = details.authors?.firstOrNull()?.let { authorMap ->
+                android.util.Log.d("BookRepository", "Processing author map: $authorMap")
+                // Try to get author name from different possible structures
+                when {
+                    authorMap.containsKey("name") -> {
+                        android.util.Log.d("BookRepository", "Found direct name field")
+                        authorMap["name"] as? String
+                    }
+                    authorMap.containsKey("author") -> {
+                        android.util.Log.d("BookRepository", "Found author object")
+                        val authorObj = authorMap["author"] as? Map<String, Any>
+                        android.util.Log.d("BookRepository", "Author object: $authorObj")
+                        when {
+                            authorObj?.containsKey("name") == true -> authorObj["name"] as? String
+                            authorObj?.containsKey("key") == true -> {
+                                // Extract author name from key like "/authors/OL1751064A"
+                                val authorKey = authorObj["key"] as? String
+                                android.util.Log.d("BookRepository", "Author key: $authorKey")
+                                // For now, return the key as the author identifier
+                                // In a real app, you might want to make another API call to get the author name
+                                authorKey?.let { key ->
+                                    if (key.startsWith("/authors/")) {
+                                        key.removePrefix("/authors/")
+                                    } else {
+                                        key
+                                    }
+                                }
+                            }
+                            else -> null
+                        }
+                    }
+                    else -> {
+                        android.util.Log.d("BookRepository", "No known author structure found")
+                        null
+                    }
+                }
+            }
+            android.util.Log.d("BookRepository", "Final extracted author: $authorName")
             
             // Extract cover URL from covers array
             val coverUrl = details.covers?.firstOrNull()?.let { coverId ->
@@ -84,8 +124,15 @@ class BookRepositoryImpl @Inject constructor(
             }
             android.util.Log.d("BookRepository", "Extracted cover URL: $coverUrl")
             
-            // Extract publish year from first_publish_date
-            val publishYear = details.firstPublishDate?.let { date ->
+            // Extract publish year from created field first, then fallback to first_publish_date
+            val publishYear = details.created?.get("value")?.let { createdValue ->
+                try {
+                    val dateString = createdValue as? String
+                    dateString?.substring(0, 4)?.toInt()
+                } catch (e: Exception) {
+                    null
+                }
+            } ?: details.firstPublishDate?.let { date ->
                 try {
                     date.substring(0, 4).toInt()
                 } catch (e: Exception) {

@@ -23,6 +23,7 @@ data class BookDetailsDto(
     @SerializedName("covers") val covers: List<Int>?,
     @SerializedName("first_publish_date") val firstPublishDate: String?,
     @SerializedName("subjects") val subjects: List<String>?,
+    @SerializedName("created") val created: Map<String, Any>?,
 )
 
 
