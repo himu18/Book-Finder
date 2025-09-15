@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
@@ -13,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -21,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.bookfinder.app.R
 import com.bookfinder.app.domain.model.Book
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
@@ -53,6 +56,8 @@ fun SearchScreen(
     onRefresh: () -> Unit,
     onFavoritesClick: () -> Unit,
 ) {
+    val gridState = books.rememberLazyGridStateWithWorkaround()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -65,11 +70,17 @@ fun SearchScreen(
             )
         }
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
             OutlinedTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
                 singleLine = true,
                 placeholder = { Text("Search books by title") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") }
@@ -104,6 +115,7 @@ fun SearchScreen(
                     ) {
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(minSize = 160.dp),
+                            state = gridState,
                             contentPadding = PaddingValues(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -111,9 +123,10 @@ fun SearchScreen(
                         ) {
                             items(
                                 count = books.itemCount,
-                                key = { index -> books[index]?.id ?: index },
+                                key = books.itemKey { book -> book.id }  // stable key from item
                             ) { index ->
-                                books[index]?.let { book ->
+                                val book = books[index]
+                                if (book != null) {
                                     BookCard(book = book, onClick = { onClick(book) })
                                 }
                             }
@@ -156,14 +169,21 @@ fun SearchScreen(
                                     }
                                 }
 
-                                else -> {
-                                }
+                                else -> Unit
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun <T : Any> LazyPagingItems<T>.rememberLazyGridStateWithWorkaround(): androidx.compose.foundation.lazy.grid.LazyGridState {
+    return when (this.itemCount) {
+        0 -> remember(this) { androidx.compose.foundation.lazy.grid.LazyGridState(0, 0) }
+        else -> androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     }
 }
 
@@ -290,7 +310,7 @@ private fun BookCard(
                     modifier = Modifier.weight(1f)
                 )
             }
-            book.author?.let { 
+            book.author?.let {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
