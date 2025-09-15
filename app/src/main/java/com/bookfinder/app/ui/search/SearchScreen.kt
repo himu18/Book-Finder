@@ -1,54 +1,42 @@
 package com.bookfinder.app.ui.search
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import com.valentinilk.shimmer.shimmer
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.bookfinder.app.R
+import com.bookfinder.app.domain.model.Book
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
-import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.paging.compose.LazyPagingItems
-import com.bookfinder.app.domain.model.Book
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
 @Composable
 fun SearchRoute(navController: NavController, viewModel: SearchViewModel = hiltViewModel()) {
     val query by viewModel.query.collectAsState()
-    val items = viewModel.results.collectAsLazyPagingItems()
+    val books = viewModel.results.collectAsLazyPagingItems()
+
     SearchScreen(
         query = query,
         onQueryChange = viewModel::onQueryChange,
-        items = items,
+        books = books,
         onClick = { book -> navController.navigate("details/${book.id.removePrefix("/works/")}") },
         onRefresh = { viewModel.refresh() },
         onFavoritesClick = { navController.navigate("favorites") }
@@ -60,7 +48,7 @@ fun SearchRoute(navController: NavController, viewModel: SearchViewModel = hiltV
 fun SearchScreen(
     query: String,
     onQueryChange: (String) -> Unit,
-    items: LazyPagingItems<Book>,
+    books: LazyPagingItems<Book>,
     onClick: (Book) -> Unit,
     onRefresh: () -> Unit,
     onFavoritesClick: () -> Unit,
@@ -83,52 +71,57 @@ fun SearchScreen(
                 onValueChange = onQueryChange,
                 modifier = Modifier.fillMaxWidth().padding(12.dp),
                 singleLine = true,
-                placeholder = { Text("Search by title") },
+                placeholder = { Text("Search books by title") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") }
             )
-            
+
             when {
                 query.isBlank() -> {
                     EmptySearchState()
                 }
-                items.loadState.refresh is androidx.paging.LoadState.Loading -> {
+
+                books.loadState.refresh is androidx.paging.LoadState.Loading -> {
                     LoadingState()
                 }
-                items.loadState.refresh is androidx.paging.LoadState.Error -> {
+
+                books.loadState.refresh is androidx.paging.LoadState.Error -> {
                     ErrorState(
-                        error = (items.loadState.refresh as androidx.paging.LoadState.Error).error,
+                        error = (books.loadState.refresh as androidx.paging.LoadState.Error).error,
                         onRetry = onRefresh
                     )
                 }
-                items.itemCount == 0 -> {
+
+                books.itemCount == 0 -> {
                     EmptyResultsState(query = query)
                 }
+
                 else -> {
                     SwipeRefresh(
                         state = rememberSwipeRefreshState(
-                            isRefreshing = items.loadState.refresh is androidx.paging.LoadState.Loading
+                            isRefreshing = books.loadState.refresh is androidx.paging.LoadState.Loading
                         ),
                         onRefresh = onRefresh,
                     ) {
                         LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 140.dp),
+                            columns = GridCells.Adaptive(minSize = 160.dp),
                             contentPadding = PaddingValues(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(items.itemSnapshotList.items) { book ->
-                                BookCard(
-                                    book = book,
-                                    onClick = { onClick(book) }
-                                )
+                            items(
+                                count = books.itemCount,
+                                key = { index -> books[index]?.id ?: index },
+                            ) { index ->
+                                books[index]?.let { book ->
+                                    BookCard(book = book, onClick = { onClick(book) })
+                                }
                             }
-                            
-                            // Pagination loader
-                            when (items.loadState.append) {
+
+                            when (val appendState = books.loadState.append) {
                                 is androidx.paging.LoadState.Loading -> {
-                                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                                        androidx.compose.foundation.layout.Box(
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(16.dp),
@@ -138,9 +131,10 @@ fun SearchScreen(
                                         }
                                     }
                                 }
+
                                 is androidx.paging.LoadState.Error -> {
-                                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                                        androidx.compose.foundation.layout.Box(
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(16.dp),
@@ -151,17 +145,19 @@ fun SearchScreen(
                                             ) {
                                                 Text(
                                                     text = "Failed to load more books",
-                                                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                                                    style = MaterialTheme.typography.bodyMedium,
                                                     modifier = Modifier.padding(8.dp)
                                                 )
-                                                Button(onClick = { items.retry() }) {
+                                                Button(onClick = { books.retry() }) {
                                                     Text("Retry")
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                else -> {}
+
+                                else -> {
+                                }
                             }
                         }
                     }
@@ -177,9 +173,7 @@ private fun EmptySearchState() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-        ) {
+        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
             Icon(
                 Icons.Default.Search,
                 contentDescription = null,
@@ -209,9 +203,7 @@ private fun ErrorState(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-        ) {
+        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
             Text("Error loading books", modifier = Modifier.padding(16.dp))
             Text(error.message ?: "Unknown error", modifier = Modifier.padding(8.dp))
             Button(onClick = onRetry) {
@@ -227,9 +219,7 @@ private fun EmptyResultsState(query: String) {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-        ) {
+        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
             Icon(
                 Icons.Default.Search,
                 contentDescription = null,
@@ -251,17 +241,34 @@ private fun BookCard(
         modifier = Modifier
             .clickable { onClick() }
             .padding(8.dp)
+            .height(220.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            GlideImage(
-                model = book.coverUrl,
-                contentDescription = book.title,
-                modifier = Modifier.fillMaxWidth()
-            )
-            androidx.compose.foundation.layout.Row(
+            if (book.coverUrl != null) {
+                GlideImage(
+                    model = book.coverUrl,
+                    contentDescription = book.title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_book_placeholder),
+                    contentDescription = "Book placeholder",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+            Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -271,7 +278,7 @@ private fun BookCard(
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                     ),
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(0.3f)
+                    modifier = Modifier.wrapContentWidth()
                 )
                 Text(
                     text = book.title,
@@ -280,11 +287,11 @@ private fun BookCard(
                     ),
                     maxLines = 2,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(0.7f)
+                    modifier = Modifier.weight(1f)
                 )
             }
             book.author?.let { 
-                androidx.compose.foundation.layout.Row(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -294,16 +301,16 @@ private fun BookCard(
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                         ),
                         color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(0.3f)
+                        modifier = Modifier.wrapContentWidth()
                     )
                     Text(
                         text = it,
                         style = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
                         ),
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(0.7f)
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }

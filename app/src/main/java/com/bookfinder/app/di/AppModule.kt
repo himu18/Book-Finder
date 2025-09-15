@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.bookfinder.app.data.local.AppDatabase
 import com.bookfinder.app.data.local.dao.BookDao
-import com.bookfinder.app.data.remote.OpenLibraryApi
+import com.bookfinder.app.data.remote.BookApiInterface
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -39,8 +39,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideOpenLibraryApi(retrofit: Retrofit): OpenLibraryApi =
-        retrofit.create(OpenLibraryApi::class.java)
+    fun provideBookApiInterface(retrofit: Retrofit): BookApiInterface =
+        retrofit.create(BookApiInterface::class.java)
 
     @Provides
     @Singleton

@@ -36,7 +36,11 @@ class SearchViewModel @Inject constructor(
             }
         }
         .cachedIn(viewModelScope)
-        .stateIn(viewModelScope, SharingStarted.Lazily, PagingData.empty())
+        .stateIn(
+            scope = viewModelScope, 
+            started = SharingStarted.WhileSubscribed(5000), 
+            initialValue = PagingData.empty()
+        )
 
     val query: StateFlow<String> = queryState
 
@@ -45,9 +49,7 @@ class SearchViewModel @Inject constructor(
     }
 
     fun refresh() {
-        // Trigger refresh by updating the refresh trigger
         refreshTrigger.value++
-        // Re-trigger the search with current query to refresh the data
         val currentQuery = queryState.value
         queryState.value = ""
         queryState.value = currentQuery

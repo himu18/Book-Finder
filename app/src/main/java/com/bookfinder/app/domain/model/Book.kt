@@ -1,7 +1,7 @@
 package com.bookfinder.app.domain.model
 
 data class Book(
-    val id: String, // OpenLibrary work key, e.g. "/works/OL468516W"
+    val id: String,
     val title: String,
     val author: String?,
     val coverUrl: String?,

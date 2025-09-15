@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,10 +33,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.bookfinder.app.R
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 
@@ -57,10 +62,9 @@ fun DetailsScreen(
     onBack: () -> Unit,
     onToggleSave: () -> Unit,
 ) {
-    // Debug logging
+
     android.util.Log.d("DetailsScreen", "Received state: isLoading=${state.isLoading}, book=${state.book}, error=${state.error}, isSaved=${state.isSaved}")
     
-    // Vertical flip animation for book cover
     val flipRotation by rememberInfiniteTransition("flip").animateFloat(
         initialValue = 0f,
         targetValue = 180f,
@@ -68,7 +72,16 @@ fun DetailsScreen(
     )
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(state.book?.title ?: "Details") },
+            title = { 
+                Text(
+                    text = state.book?.title ?: "Details",
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    style = androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 20.sp
+                    )
+                )
+            },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -110,20 +123,33 @@ fun DetailsScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Book Cover with vertical flip animation
-                        GlideImage(
-                            model = state.book.coverUrl,
-                            contentDescription = state.book.title,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .size(300.dp)
-                                .graphicsLayer {
-                                    rotationY = flipRotation
-                                    cameraDistance = 12f * density
-                                }
-                        )
-                        
-                        // Title
+                        if (state.book.coverUrl != null) {
+                            GlideImage(
+                                model = state.book.coverUrl,
+                                contentDescription = state.book.title,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .size(300.dp)
+                                    .graphicsLayer {
+                                        rotationY = flipRotation
+                                        cameraDistance = 12f * density
+                                    }
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_book_placeholder),
+                                contentDescription = "Book placeholder",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .size(300.dp)
+                                    .graphicsLayer {
+                                        rotationY = flipRotation
+                                        cameraDistance = 12f * density
+                                    },
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -144,8 +170,7 @@ fun DetailsScreen(
                                 modifier = Modifier.weight(0.7f)
                             )
                         }
-                        
-                        // Author
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -166,8 +191,7 @@ fun DetailsScreen(
                                 modifier = Modifier.weight(0.7f)
                             )
                         }
-                        
-                        // Publication Year
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -188,8 +212,7 @@ fun DetailsScreen(
                                 modifier = Modifier.weight(0.7f)
                             )
                         }
-                        
-                        // Description
+
                         state.book.description?.let { description ->
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
@@ -212,7 +235,6 @@ fun DetailsScreen(
                             }
                         }
                         
-                        // Fallback message if no data available
                         if (state.book.author == null && state.book.publishYear == null && state.book.description == null) {
                             Text(
                                 text = "Limited details available for this book",

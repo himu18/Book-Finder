@@ -16,13 +16,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 private class FakeRepo : BookRepository {
-    var saved = false
-    override fun searchBooksPaged(query: String) = flowOf(PagingData.empty<com.bookfinder.app.domain.model.Book>())
+    private val savedBooks = mutableSetOf<String>()
+    
+    override fun searchBooksPaged(query: String) = flowOf(PagingData.empty<Book>())
     override suspend fun getBookDetails(workId: String): Book = Book(id = "/works/$workId", title = "T", author = "A", coverUrl = null, publishYear = 2020)
     override fun observeSavedBooks() = flowOf(emptyList<Book>())
-    override suspend fun saveBook(book: Book) { saved = true }
-    override suspend fun removeBook(id: String) { saved = false }
-    override suspend fun isSaved(id: String) = saved
+    override suspend fun saveBook(book: Book) { savedBooks.add(book.id) }
+    override suspend fun removeBook(id: String) { savedBooks.remove(id) }
+    override suspend fun isSaved(id: String) = savedBooks.contains(id)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -42,8 +43,12 @@ class DetailsViewModelTest {
     fun load_and_toggleSave_updates_state() = runTest(dispatcher) {
         vm.load("OL1W")
         dispatcher.scheduler.advanceUntilIdle()
-        assertThat(vm.state.value.book?.title).isEqualTo("T")
-        assertThat(vm.state.value.isSaved).isFalse()
+        
+        val currentState = vm.state.value
+        assertThat(currentState.book).isNotNull()
+        assertThat(currentState.book?.title).isEqualTo("T")
+        assertThat(currentState.isSaved).isFalse()
+        
         vm.toggleSave()
         dispatcher.scheduler.advanceUntilIdle()
         assertThat(vm.state.value.isSaved).isTrue()

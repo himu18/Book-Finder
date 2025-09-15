@@ -1,5 +1,6 @@
 package com.bookfinder.app.ui.favorites
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,8 +9,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -29,10 +32,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.bookfinder.app.R
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 
@@ -112,7 +118,7 @@ fun FavoritesScreen(
             }
             else -> {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 140.dp),
+                    columns = GridCells.Adaptive(minSize = 160.dp),
                     contentPadding = PaddingValues(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -142,19 +148,34 @@ private fun FavoriteBookCard(
         modifier = Modifier
             .clickable { onClick() }
             .padding(8.dp)
+            .height(300.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Book Cover without animation
-            GlideImage(
-                model = book.coverUrl,
-                contentDescription = book.title,
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            // Title with label
+            if (book.coverUrl != null) {
+                GlideImage(
+                    model = book.coverUrl,
+                    contentDescription = book.title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_book_placeholder),
+                    contentDescription = "Book placeholder",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -165,7 +186,7 @@ private fun FavoriteBookCard(
                         fontWeight = FontWeight.Bold
                     ),
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(0.3f)
+                    modifier = Modifier.wrapContentWidth()
                 )
                 Text(
                     text = book.title,
@@ -174,11 +195,9 @@ private fun FavoriteBookCard(
                     ),
                     maxLines = 2,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(0.7f)
+                    modifier = Modifier.weight(1f)
                 )
             }
-            
-            // Author with label
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -189,20 +208,18 @@ private fun FavoriteBookCard(
                         fontWeight = FontWeight.Bold
                     ),
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(0.3f)
+                    modifier = Modifier.wrapContentWidth()
                 )
                 Text(
                     text = book.author ?: "Unknown Author",
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Medium
                     ),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(0.7f)
+                    modifier = Modifier.weight(1f)
                 )
             }
-            
-            // Year with label
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -213,18 +230,18 @@ private fun FavoriteBookCard(
                         fontWeight = FontWeight.Bold
                     ),
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(0.3f)
+                    modifier = Modifier.wrapContentWidth()
                 )
                 Text(
                     text = book.publishYear?.toString() ?: "Unknown Year",
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Medium
                     ),
-                    modifier = Modifier.weight(0.7f)
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
-            
-            // Remove button
             IconButton(
                 onClick = onRemove,
                 modifier = Modifier.size(24.dp)

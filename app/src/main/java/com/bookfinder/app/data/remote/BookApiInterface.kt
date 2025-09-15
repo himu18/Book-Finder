@@ -6,7 +6,7 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-interface OpenLibraryApi {
+interface BookApiInterface {
     @GET("search.json")
     suspend fun searchBooks(
         @Query("title") query: String,
@@ -19,5 +19,4 @@ interface OpenLibraryApi {
         @Path("workId") workId: String,
     ): BookDetailsDto
 }
-
 

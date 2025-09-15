@@ -1,6 +1,6 @@
 package com.bookfinder.app
 
-import com.bookfinder.app.data.remote.OpenLibraryApi
+import com.bookfinder.app.data.remote.BookApiInterface
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
@@ -11,9 +11,9 @@ import org.junit.Test
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-class OpenLibraryApiTest {
+class BookApiInterfaceTest {
     private lateinit var server: MockWebServer
-    private lateinit var api: OpenLibraryApi
+    private lateinit var api: BookApiInterface
 
     @Before
     fun setup() {
@@ -23,7 +23,7 @@ class OpenLibraryApiTest {
             .baseUrl(server.url("/"))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(OpenLibraryApi::class.java)
+            .create(BookApiInterface::class.java)
     }
 
     @After
@@ -40,5 +40,4 @@ class OpenLibraryApiTest {
         assertThat(res.numFound).isEqualTo(1000)
     }
 }
-
 
